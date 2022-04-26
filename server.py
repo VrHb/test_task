@@ -1,45 +1,47 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from fastapi.responses import Response
+
+from loguru import logger
+
 
 
 app = FastAPI()
 
-new_article = {
-        42: {
-            "name": "New_article",
-            "body_article": "Some text here",
-            "description": "some new article",
-            "tags": [
-                    "article",
-                    "new"
-                    ]
-            }
-        }
+articles = {}
+
+comments = {}
 
 class Article(BaseModel):
-    name: str
+    name_article: str
     body_article: str
     tags: set[str] = set()
+    comments: dict | None = None
 
 
-@app.get("/")
-async def simple_page():
-    with open("template/index.html", "r") as file:
-        page = file.read()
-    response = Response(page, media_type="text/html")
-    return response
+class Comment(BaseModel):
+    comment_id: int
+    user_id: int
+    text: str
+    comments: dict | None = None
 
 
 @app.get("/articles/{article_id}")
 async def getting_article(article_id: int):
-    return new_article[article_id]
+    if article_id not in articles:
+        return "Article not found!"
+    return articles[article_id]
 
 
-@app.post("/create_articles/{article_id}", response_model=Article, summary="Create an article")
+@app.post("/create_articles/{article_id}")
 async def create_article(article_id: int, article: Article):
-    new_article[article_id] = {
-            "name": article.name, "body_article": article.body_article,
-            "tags": article.tags
-            }
-    return new_article[article_id]
+    articles[article_id] = article
+    return articles[article_id]
+
+
+@app.post("/articles/{article_id}/comments")
+async def adding_comments(article_id: int, comment: Comment):
+    comment_id = "C" + str(article_id)
+    articles[article_id].comments = {comment_id: comment}
+    return articles[article_id]
+
+
